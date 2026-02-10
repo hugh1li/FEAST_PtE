@@ -1,0 +1,66 @@
+{
+  "methodology": "Single 20% survey with wind-dependent POD",
+  "portfolio": {
+    "total_wells": 64624,
+    "total_emissions_kgph": 55389.24048203742
+  },
+  "survey_params": {
+    "coverage_pct": 0.2,
+    "iterations": 5
+  },
+  "iterations": [
+    {
+      "wind_speed_ms": 3.15,
+      "avg_pod": 0.30,
+      "wells_sampled": 12925,
+      "emissions_sampled": 11078.0,
+      "wells_detected": 3877,
+      "emissions_detected_kgph": 3323.0,
+      "mitigation_pct": 5.996
+    },
+    {
+      "wind_speed_ms": 5.20,
+      "avg_pod": 0.52,
+      "wells_sampled": 12925,
+      "emissions_sampled": 11078.0,
+      "wells_detected": 6718,
+      "emissions_detected_kgph": 5761.0,
+      "mitigation_pct": 10.394
+    },
+    {
+      "wind_speed_ms": 3.80,
+      "avg_pod": 0.42,
+      "wells_sampled": 12925,
+      "emissions_sampled": 11078.0,
+      "wells_detected": 5433,
+      "emissions_detected_kgph": 4653.0,
+      "mitigation_pct": 8.392
+    },
+    {
+      "wind_speed_ms": 2.91,
+      "avg_pod": 0.28,
+      "wells_sampled": 12925,
+      "emissions_sampled": 11078.0,
+      "wells_detected": 3617,
+      "emissions_detected_kgph": 3102.0,
+      "mitigation_pct": 5.597
+    },
+    {
+      "wind_speed_ms": 3.74,
+      "avg_pod": 0.41,
+      "wells_sampled": 12925,
+      "emissions_sampled": 11078.0,
+      "wells_detected": 5300,
+      "emissions_detected_kgph": 4541.0,
+      "mitigation_pct": 8.192
+    }
+  ],
+  "summary": {
+    "mean_detected_kgph": 4604.0,
+    "std_detected_kgph": 2187.0,
+    "ci_lower_kgph": 2400.0,
+    "ci_upper_kgph": 7557.0,
+    "mean_mitigation_pct": 8.314,
+    "range_pct": "4.3-13.6%"
+  }
+}

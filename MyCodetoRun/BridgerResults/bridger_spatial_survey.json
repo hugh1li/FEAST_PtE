@@ -1,0 +1,68 @@
+{
+  "methodology": "Spatial clustering (DBSCAN) + Permian 2024 schedule",
+  "clustering": {
+    "eps_km": 0.8,
+    "n_clusters": 1496,
+    "n_noise_wells": 2110
+  },
+  "portfolio": {
+    "total_wells": 64624,
+    "total_emissions_kgph": 55389.24048203742
+  },
+  "survey_schedule": {
+    "model": "Permian 2024: 4 quarterly surveys, 195 days/year, 2.7 sensors",
+    "quarterly_coverage_pct": 0.2,
+    "days_per_quarter": 3.52458630952381
+  },
+  "annual_results": [
+    {
+      "quarter": "Q1",
+      "clusters_surveyed": 299,
+      "wells_surveyed": 3727,
+      "emissions_surveyed_kgph": 2762.3935054135945,
+      "wind_speed_ms": 3.6,
+      "avg_pod": 0.25185186979191027,
+      "wells_detected": 937,
+      "emissions_detected_kgph": 1058.4588084785257,
+      "mitigation_pct": 1.9109466013020726
+    },
+    {
+      "quarter": "Q2",
+      "clusters_surveyed": 299,
+      "wells_surveyed": 3267,
+      "emissions_surveyed_kgph": 2437.6321175320213,
+      "wind_speed_ms": 3.1,
+      "avg_pod": 0.21305494625042445,
+      "wells_detected": 725,
+      "emissions_detected_kgph": 802.603458993329,
+      "mitigation_pct": 1.4490241281672946
+    },
+    {
+      "quarter": "Q3",
+      "clusters_surveyed": 299,
+      "wells_surveyed": 34423,
+      "emissions_surveyed_kgph": 30046.380509999475,
+      "wind_speed_ms": 3.6,
+      "avg_pod": 0.31252746593122444,
+      "wells_detected": 10644,
+      "emissions_detected_kgph": 13404.840905183932,
+      "mitigation_pct": 24.201163959868857
+    },
+    {
+      "quarter": "Q4",
+      "clusters_surveyed": 299,
+      "wells_surveyed": 4251,
+      "emissions_surveyed_kgph": 2941.5634907420463,
+      "wind_speed_ms": 3.6,
+      "avg_pod": 0.23066732794069722,
+      "wells_detected": 977,
+      "emissions_detected_kgph": 1067.2088061512027,
+      "mitigation_pct": 1.9267438890000588
+    }
+  ],
+  "summary": {
+    "total_detected_kgph": 16333.111978806988,
+    "total_mitigation_pct": 29.487878578338282,
+    "avg_detected_per_quarter_kgph": 4083.277994701747
+  }
+}

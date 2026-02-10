@@ -1,0 +1,55 @@
+{
+  "portfolio_total_kgph": 55389.2,
+  "strategies": [
+    {
+      "strategy": "Status Quo (No LDAR)",
+      "annual_survey_pct": 0.0,
+      "years": 5,
+      "days_per_year": 0.0,
+      "annual_detection_kgph": 0.0,
+      "annual_mitigation_pct": 0.0,
+      "cumulative_detection_5yr_kgph": 0.0,
+      "cumulative_mitigation_5yr_pct": 0.0
+    },
+    {
+      "strategy": "Minimum (5% annual)",
+      "annual_survey_pct": 5.0,
+      "years": 5,
+      "days_per_year": 5.4,
+      "annual_detection_kgph": 1150.2,
+      "annual_mitigation_pct": 2.08,
+      "cumulative_detection_5yr_kgph": 5751.0,
+      "cumulative_mitigation_5yr_pct": 10.38
+    },
+    {
+      "strategy": "Standard (20% annual)",
+      "annual_survey_pct": 20.0,
+      "years": 5,
+      "days_per_year": 21.6,
+      "annual_detection_kgph": 4604.0,
+      "annual_mitigation_pct": 8.31,
+      "cumulative_detection_5yr_kgph": 23020.0,
+      "cumulative_mitigation_5yr_pct": 41.53
+    },
+    {
+      "strategy": "Intensive (40% annual)",
+      "annual_survey_pct": 40.0,
+      "years": 5,
+      "days_per_year": 43.2,
+      "annual_detection_kgph": 9208.0,
+      "annual_mitigation_pct": 16.62,
+      "cumulative_detection_5yr_kgph": 46040.0,
+      "cumulative_mitigation_5yr_pct": 83.07
+    },
+    {
+      "strategy": "Full Portfolio (Rotating)",
+      "annual_survey_pct": 33.3,
+      "years": 5,
+      "days_per_year": 35.96,
+      "annual_detection_kgph": 7604.0,
+      "annual_mitigation_pct": 13.73,
+      "cumulative_detection_5yr_kgph": 38020.0,
+      "cumulative_mitigation_5yr_pct": 68.63
+    }
+  ]
+}
