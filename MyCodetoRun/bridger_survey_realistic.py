@@ -137,7 +137,7 @@ def simulate_survey(emissions_df, coverage_pct=SURVEY_COVERAGE_PCT):
 def main():
     """Main simulation."""
     # Load emissions data
-    data_path = 'PAMarginalWellEmissions2023.pkl'
+    data_path = 'feast_emissions.pkl'
     if not Path(data_path).exists():
         print(f"Error: {data_path} not found")
         return
@@ -230,6 +230,14 @@ def main():
     }
     
     output_path = output_dir / 'bridger_survey_realistic.json'
+    
+    # Convert numpy arrays to lists for JSON serialization
+    for iteration in output_data['iterations']:
+        if 'pods' in iteration:
+            iteration['pods'] = iteration['pods'].tolist()
+        if 'detected' in iteration:
+            iteration['detected'] = iteration['detected'].tolist()
+    
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
     

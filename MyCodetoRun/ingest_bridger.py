@@ -143,7 +143,7 @@ def main():
     print(f"Mean emission: {feast_df['emission_rate_kgph'].mean():.3f} kg/h")
     print(f"Median emission: {feast_df['emission_rate_kgph'].median():.3f} kg/h")
     print(f"Max emission: {feast_df['emission_rate_kgph'].max():.3f} kg/h")
-    print(f"Min emission: {fest_df['emission_rate_kgph'].min():.3f} kg/h")
+    print(f"Min emission: {feast_df['emission_rate_kgph'].min():.3f} kg/h")
 
 
 if __name__ == '__main__':
