@@ -14,7 +14,7 @@ class ResultAggregate:
         self.time_value = time_value or []
         self.units = units
 
-    def get_vals(self, t_start=0, t_end=np.infty):
+    def get_vals(self, t_start=0, t_end=np.inf):
         """
         Returns all values associated with times between t_start and t_end.
 
@@ -47,7 +47,7 @@ class ResultDiscrete(ResultAggregate):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def get_cumulative_vals(self, t_start=0, t_end=np.infty):
+    def get_cumulative_vals(self, t_start=0, t_end=np.inf):
         """
         Returns a cumulative sum of the attribute "value"
 
@@ -61,7 +61,7 @@ class ResultDiscrete(ResultAggregate):
         ti = ti[(ti >= t_start) & (ti < t_end)]
         return ti, np.cumsum(self.get_vals(t_start, t_end))
 
-    def get_sum_val(self, t_start=0, t_end=np.infty):
+    def get_sum_val(self, t_start=0, t_end=np.inf):
         """
         Returns the sum of values between t_start and t_end
 

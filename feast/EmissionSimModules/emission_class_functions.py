@@ -11,7 +11,7 @@ class Emission:
     """
     Stores all properties of all emissions that exist at a particular instant in a simulation.
     """
-    def __init__(self, flux=(), reparable=True, site_index=(), comp_index=(), start_time=0, end_time=np.infty,
+    def __init__(self, flux=(), reparable=True, site_index=(), comp_index=(), start_time=0, end_time=np.inf,
                  repair_cost=(), emission_id=None):
         """
         :param flux: An array of emission rates (array of floats--gram/second)
@@ -29,9 +29,9 @@ class Emission:
             length_in = 1
 
         if reparable is True:
-            rep_array = np.ones(length_in, dtype=np.bool)
+            rep_array = np.ones(length_in, dtype=bool)
         elif reparable is False:
-            rep_array = np.zeros(length_in, dtype=np.bool)
+            rep_array = np.zeros(length_in, dtype=bool)
         else:
             rep_array = np.array(reparable)
         if emission_id is None:

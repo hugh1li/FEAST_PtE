@@ -56,7 +56,7 @@ class CompSurvey(DetectionMethod):
         self.detection_probabilities = np.array(detection_probabilities)
 
         # -------------- Internal variables -----------------
-        self.mid_site_fail_time = np.infty
+        self.mid_site_fail_time = np.inf
 
         # -------------- Set calculated parameters --------------
         work_time = (self.ophrs['end'] - self.ophrs['begin']) / 24
@@ -102,7 +102,7 @@ class CompSurvey(DetectionMethod):
                 # if the survey has been stuck part way through a site for op_env_wait_time due to operating envelope
                 # conditions, move on to the next valid site.
                 self.comp_survey_index = 0
-                self.mid_site_fail_time = np.infty
+                self.mid_site_fail_time = np.inf
             if self.comp_survey_index == 0:
                 site_inds = self.choose_sites(gas_field, time, 1)
                 if len(site_inds) > 0:

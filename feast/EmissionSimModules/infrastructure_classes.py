@@ -19,7 +19,7 @@ class Component:
     def __init__(self, repair_cost_path=None, emission_data_path=None, base_reparable=None, custom_emission_maker=None,
                  emission_production_rate=0, emission_per_comp=None, episodic_emission_sizes=[0],
                  episodic_emission_per_day=0, episodic_emission_duration=0, vent_sizes=[0],
-                 vent_period=np.infty, vent_starts=np.array([]), vent_duration=0, name='default',
+                 vent_period=np.inf, vent_starts=np.array([]), vent_duration=0, name='default',
                  null_repair_rate=None, dist_type='bootstrap'):
         """
         :param repair_cost_path: path to a repair cost data file
