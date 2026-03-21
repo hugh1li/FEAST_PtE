@@ -19,10 +19,14 @@ from scipy.spatial.distance import cdist
 # === CONSTANTS ===
 DBSCAN_EPS_KM = 0.8  # Neighborhood radius (facility pad scale)
 DBSCAN_MIN_SAMPLES = 2
-POD_90_KGPH = 1.27
-LOGISTIC_STEEPNESS = 2.0
-BASELINE_WIND_MS = 3.5
-WIND_EXPONENT = -0.3
+# SI Combined GML 2.0 POD coefficients (Table 3)
+POD_ALPHA_1 = 2.0000
+POD_ALPHA_2 = 1.5000
+POD_BETA_1 = 2.41e-3
+POD_BETA_2 = 1.9505
+POD_BETA_3 = 2.0836
+POD_BETA_4 = 1.5185
+DINWD_N = 1.0
 MIN_WIND_MS = 1.0
 MAX_WIND_MS = 6.0
 
@@ -98,19 +102,17 @@ def estimate_travel_time(lat1, lon1, lat2, lon2):
 
 
 def pod_bridger(emission_rate_kgph, wind_speed_ms):
-    """Calculate Bridger POD."""
-    wind_factor = np.exp(WIND_EXPONENT * (wind_speed_ms - BASELINE_WIND_MS))
-    adjusted_threshold = POD_90_KGPH * wind_factor
-    
-    if emission_rate_kgph <= 0:
+    """Calculate Bridger POD using SI Combined GML 2.0 model."""
+    if emission_rate_kgph <= 0 or wind_speed_ms <= 0:
         return 0.0
-    
-    log_e = np.log(emission_rate_kgph)
-    log_threshold = np.log(adjusted_threshold)
-    exponent = LOGISTIC_STEEPNESS * (log_e - log_threshold)
-    pod = 1.0 / (1.0 + np.exp(-exponent))
-    
-    return np.clip(pod, 0.0, 1.0)
+
+    wind_speed_ms = float(np.clip(wind_speed_ms, MIN_WIND_MS, MAX_WIND_MS))
+
+    dinwd = (DINWD_N ** POD_BETA_3) * (wind_speed_ms ** POD_BETA_4)
+    scaled_signal = POD_BETA_1 * (emission_rate_kgph ** POD_BETA_2) / dinwd
+    pod = 1.0 - (1.0 + (scaled_signal ** POD_ALPHA_1)) ** (-POD_ALPHA_2)
+
+    return float(np.clip(pod, 0.0, 1.0))
 
 
 def sample_wind_from_tmy(tmy_path='../ExampleData/TMY-DataExample.csv'):

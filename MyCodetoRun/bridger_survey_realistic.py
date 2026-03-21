@@ -17,10 +17,14 @@ import pickle
 
 
 # === CONSTANTS ===
-POD_90_GPS = 1.27  # kg/h at which Bridger has 90% POD (Thorpe et al. 2024)
-LOGISTIC_STEEPNESS = 2.0
-BASELINE_WIND_MS = 3.5
-WIND_EXPONENT = -0.3
+# SI Combined GML 2.0 POD coefficients (Table 3)
+POD_ALPHA_1 = 2.0000
+POD_ALPHA_2 = 1.5000
+POD_BETA_1 = 2.41e-3
+POD_BETA_2 = 1.9505
+POD_BETA_3 = 2.0836
+POD_BETA_4 = 1.5185
+DINWD_N = 13/1000
 MIN_WIND_MS = 1.0
 MAX_WIND_MS = 6.0
 SURVEY_COVERAGE_PCT = 0.20
@@ -31,10 +35,11 @@ N_ITERATIONS = 5
 def pod_bridger(emission_rate_kgph, wind_speed_ms):
     """
     Calculate Bridger POD for given emission and wind speed.
-    
-    Based on Thorpe et al. (2024) Remote Sensing of Environment:
-    - 90% POD at 1.27 kg/h (3.5 m/s wind)
-    - Wind adjustment: exp(-0.3 * wind_delta)
+
+    Uses SI Combined GML 2.0 model:
+    PoD = 1 - (1 + (beta1 * Q^beta2 / (n^beta3 * u^beta4))^alpha1)^(-alpha2)
+
+    Where DINWD = n^beta3 * u^beta4.
     
     Args:
         emission_rate_kgph: Well emission in kg/h
@@ -43,20 +48,16 @@ def pod_bridger(emission_rate_kgph, wind_speed_ms):
     Returns:
         Detection probability [0, 1]
     """
-    # Adjusted threshold based on wind
-    wind_factor = np.exp(WIND_EXPONENT * (wind_speed_ms - BASELINE_WIND_MS))
-    adjusted_threshold = POD_90_GPS * wind_factor
-    
-    # Logistic curve on log-scale
-    if emission_rate_kgph <= 0:
+    if emission_rate_kgph <= 0 or wind_speed_ms <= 0:
         return 0.0
-    
-    log_e = np.log(emission_rate_kgph)
-    log_threshold = np.log(adjusted_threshold)
-    exponent = LOGISTIC_STEEPNESS * (log_e - log_threshold)
-    pod = 1.0 / (1.0 + np.exp(-exponent))
-    
-    return np.clip(pod, 0.0, 1.0)
+
+    wind_speed_ms = float(np.clip(wind_speed_ms, MIN_WIND_MS, MAX_WIND_MS))
+
+    dinwd = (DINWD_N ** POD_BETA_3) * (wind_speed_ms ** POD_BETA_4)
+    scaled_signal = POD_BETA_1 * (emission_rate_kgph ** POD_BETA_2) / dinwd
+    pod = 1.0 - (1.0 + (scaled_signal ** POD_ALPHA_1)) ** (-POD_ALPHA_2)
+
+    return float(np.clip(pod, 0.0, 1.0))
 
 
 def sample_wind_from_tmy(tmy_path='../ExampleData/TMY-DataExample.csv'):
@@ -210,7 +211,7 @@ def main():
     output_dir.mkdir(exist_ok=True)
     
     output_data = {
-        'methodology': 'Single 20% survey with wind-dependent POD',
+        'methodology': 'Single 20% survey with SI Combined GML 2.0 wind-normalized POD',
         'portfolio': {
             'total_wells': len(emissions_df),
             'total_emissions_kgph': float(total_emissions),

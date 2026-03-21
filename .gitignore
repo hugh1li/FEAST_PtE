@@ -43,3 +43,8 @@ BridgerResults/*.pkl
 BridgerResults/*.csv
 ExampleRunScriptResults/*.p
 ExampleRunScriptResults/*.pkl
+
+# Service account / credentials
+ee-service-account.json
+# Ignore specific uploaded service account key in MyCodetoRun
+MyCodetoRun/spike0spiegel-methaneair-ea316b306af7.json
