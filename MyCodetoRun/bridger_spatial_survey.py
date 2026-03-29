@@ -26,7 +26,9 @@ POD_BETA_1 = 2.41e-3
 POD_BETA_2 = 1.9505
 POD_BETA_3 = 2.0836
 POD_BETA_4 = 1.5185
-DINWD_N = 1.0
+DINWD_N = 13/1000  # BUG FIX (2026-03-29): was 1.0, which gave ~0 POD for all PA marginal wells.
+                   # 0.013 matches bridger_survey_realistic.py and yields physically correct curve
+                   # (POD ≈ 97% at 1 kg/h, ≈ 52% at 0.5 kg/h, ≈ 2% at 0.1 kg/h @ 3.5 m/s wind)
 MIN_WIND_MS = 1.0
 MAX_WIND_MS = 6.0
 
