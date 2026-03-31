@@ -198,6 +198,68 @@ def simulate_one_survey(emissions: np.ndarray,
     }
 
 
+def build_mitigation_concentration_table(emissions: np.ndarray,
+                                         coverage_frac: float,
+                                         flyable_winds: np.ndarray | None,
+                                         n_iter: int,
+                                         n_bins: int = 10) -> pd.DataFrame:
+    """
+    Build an attribution table showing where detected emissions come from.
+
+    The key diagnostic is whether detected emissions are concentrated in the
+    highest-emitting wells (large-emitter capture) rather than broad detection
+    of most emitters.
+    """
+    # Rank-based bins avoid duplicate-edge failures when many wells share
+    # identical emission values.
+    order = np.argsort(emissions)
+    ranks = np.empty(len(emissions), dtype=float)
+    ranks[order] = np.arange(len(emissions), dtype=float)
+    pct = (ranks + 0.5) / len(emissions)
+    all_bin_ids = np.minimum((pct * n_bins).astype(int), n_bins - 1) + 1
+
+    totals = pd.DataFrame({
+        'bin': np.arange(1, n_bins + 1),
+        'surveyed_wells': np.zeros(n_bins, dtype=float),
+        'detected_wells': np.zeros(n_bins, dtype=float),
+        'surveyed_emissions': np.zeros(n_bins, dtype=float),
+        'detected_emissions': np.zeros(n_bins, dtype=float),
+    })
+
+    n_total = len(emissions)
+    n_survey = int(n_total * coverage_frac)
+
+    for _ in range(n_iter):
+        idx_survey = np.random.choice(n_total, size=n_survey, replace=False)
+        em_survey = emissions[idx_survey]
+        if flyable_winds is not None:
+            wind_ms = float(np.random.choice(flyable_winds))
+        else:
+            wind_ms = float(np.random.uniform(MIN_WIND_MS, MAX_WIND_MS))
+
+        pods = pod_vec(em_survey, wind_ms)
+        detected = np.random.binomial(1, pods).astype(bool)
+        bin_ids = all_bin_ids[idx_survey]
+
+        for b in range(1, n_bins + 1):
+            m = (bin_ids == b)
+            if not np.any(m):
+                continue
+            totals.loc[b - 1, 'surveyed_wells'] += int(np.sum(m))
+            totals.loc[b - 1, 'detected_wells'] += int(np.sum(detected[m]))
+            totals.loc[b - 1, 'surveyed_emissions'] += float(np.sum(em_survey[m]))
+            totals.loc[b - 1, 'detected_emissions'] += float(np.sum(em_survey[m][detected[m]]))
+
+    totals[['surveyed_wells', 'detected_wells', 'surveyed_emissions', 'detected_emissions']] /= n_iter
+    totals['well_detection_rate_pct'] = 100.0 * totals['detected_wells'] / totals['surveyed_wells']
+    totals['emission_capture_rate_pct'] = 100.0 * totals['detected_emissions'] / totals['surveyed_emissions']
+    totals['share_of_detected_emissions_pct'] = 100.0 * totals['detected_emissions'] / totals['detected_emissions'].sum()
+    totals['share_of_detected_wells_pct'] = 100.0 * totals['detected_wells'] / totals['detected_wells'].sum()
+    totals['share_of_surveyed_wells_pct'] = 100.0 * totals['surveyed_wells'] / totals['surveyed_wells'].sum()
+    totals['share_of_surveyed_emissions_pct'] = 100.0 * totals['surveyed_emissions'] / totals['surveyed_emissions'].sum()
+    return totals
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -339,6 +401,29 @@ def main():
     print("  IMPORTANT CAVEAT: Annual numbers assume emissions persist after detection")
     print("  (i.e., repairs happen between surveys). Actual reduction depends on repair rate.")
 
+    # ── Large-emitter attribution analysis ───────────────────────────────────
+    conc_df = build_mitigation_concentration_table(
+        emissions=emissions,
+        coverage_frac=SURVEY_COVERAGE_FRAC,
+        flyable_winds=flyable_winds,
+        n_iter=N_ITER,
+        n_bins=10,
+    )
+    top10 = conc_df.iloc[-1]
+    top20 = conc_df.iloc[-2:].sum(numeric_only=True)
+    print()
+    print(separator)
+    print("WHO DRIVES MITIGATION? (COUNT VS EMISSIONS)")
+    print(separator)
+    print(f"  Top emission decile (highest 10% wells):")
+    print(f"    Share of detected wells     : {top10['share_of_detected_wells_pct']:.1f}%")
+    print(f"    Share of detected emissions : {top10['share_of_detected_emissions_pct']:.1f}%")
+    print(f"  Top two emission deciles (highest 20% wells):")
+    print(f"    Share of detected wells     : {top20['share_of_detected_wells_pct']:.1f}%")
+    print(f"    Share of detected emissions : {top20['share_of_detected_emissions_pct']:.1f}%")
+    print("  Interpretation: if emission-share >> well-share, mitigation is driven by")
+    print("  catching high emitters, not by seeing all emitters.")
+
     # ── Save results ───────────────────────────────────────────────────────────
     csv_out = OUT_DIR / 'simulation_results.csv'
     res_df.to_csv(csv_out, index=False)
@@ -404,6 +489,46 @@ def main():
     fig.savefig(plot_path, dpi=150, bbox_inches='tight')
     print(f"[6] Plot saved: {plot_path}")
     plt.close()
+
+    # Extra diagnostic chart for concentration of mitigation drivers
+    fig2, axes2 = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Left panel: share of detected wells vs share of detected emissions by decile
+    ax2 = axes2[0]
+    x = np.arange(1, 11)
+    w = 0.38
+    ax2.bar(x - w/2, conc_df['share_of_detected_wells_pct'], width=w,
+            color='lightsteelblue', label='Share of detected wells')
+    ax2.bar(x + w/2, conc_df['share_of_detected_emissions_pct'], width=w,
+            color='darkorange', label='Share of detected emissions')
+    ax2.set_xlabel('Emission decile (1=lowest, 10=highest)')
+    ax2.set_ylabel('Share (%)')
+    ax2.set_title('Detected Count vs Detected Emission Mass')
+    ax2.legend()
+
+    # Right panel: cumulative concentration curve
+    ax3 = axes2[1]
+    desc = conc_df.sort_values('bin', ascending=False).reset_index(drop=True)
+    x_cum = np.arange(1, 11) / 10.0 * 100.0
+    y_cum_wells = desc['share_of_detected_wells_pct'].cumsum()
+    y_cum_emiss = desc['share_of_detected_emissions_pct'].cumsum()
+    ax3.plot(x_cum, y_cum_wells, marker='o', color='royalblue', label='Cumulative detected wells')
+    ax3.plot(x_cum, y_cum_emiss, marker='o', color='firebrick', label='Cumulative detected emissions')
+    ax3.plot([0, 100], [0, 100], linestyle='--', color='gray', linewidth=1, label='Parity line')
+    ax3.set_xlabel('Top-emitter population included (%)')
+    ax3.set_ylabel('Cumulative share captured (%)')
+    ax3.set_title('Concentration: High Emitters vs Captured Mitigation')
+    ax3.legend()
+
+    plt.tight_layout()
+    concentration_plot_path = OUT_DIR / 'mitigation_driver_concentration.png'
+    fig2.savefig(concentration_plot_path, dpi=150, bbox_inches='tight')
+    print(f"[7] Plot saved: {concentration_plot_path}")
+    plt.close()
+
+    conc_csv = OUT_DIR / 'mitigation_driver_concentration_table.csv'
+    conc_df.to_csv(conc_csv, index=False)
+    print(f"[8] Concentration table saved: {conc_csv}")
 
     # ── FEAST integrity check ─────────────────────────────────────────────────
     print()
