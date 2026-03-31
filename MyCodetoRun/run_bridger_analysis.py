@@ -12,14 +12,19 @@ How to run:
 
 What this script does (in order):
     1. Load PA marginal well emission data from feast_emissions.csv
-    2. Print the raw data summary so you can verify the numbers
+    2. Build a minimal FEAST GasField to load TMY meteorology through FEAST
     3. Define the SI Combined GML 2.0 POD function with printed coefficients
-    4. Print a POD table at several emission rates (proof-read against paper)
+    4. Create a survey-scale spatial wind field across the sampled wells
     5. Monte Carlo simulation: N_ITER surveys × 20% random well selection
     6. Report results using TWO denominators explicitly:
          (a) % of TOTAL portfolio emissions detected  <- what regulators care about
          (b) % of SURVEYED wells' emissions detected  <- Bridger's actual detection rate
     7. Save results and produce plots
+
+Important limitation:
+    The wind field in this script is FEAST-backed in time but not a true gridded
+    mesoscale weather product. It applies spatial variation across surveyed wells
+    using their coordinates plus the sampled FEAST/TMY wind snapshot.
 
 Author: Analysis script (NOT modifying any original FEAST files)
 Date:   2026-03-29
@@ -27,6 +32,11 @@ Date:   2026-03-29
 
 import sys
 import os
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 # ── Ensure we do NOT accidentally import modified FEAST code ──────────────────
 # All of our custom POD/survey logic lives RIGHT HERE in this file.
@@ -38,7 +48,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')          # no display required; saves PNGs
 import matplotlib.pyplot as plt
-from pathlib import Path
+
+from feast.EmissionSimModules.emission_class_functions import Emission
+from feast.EmissionSimModules.infrastructure_classes import Component, GasField, Site
+from feast.EmissionSimModules.simulation_classes import Time
 
 np.random.seed(42)  # reproducible
 
@@ -67,6 +80,8 @@ MAX_WIND_MS = 6.0      # m/s — above this safety limits ground flights
 # ── Survey parameters ─────────────────────────────────────────────────────────
 SURVEY_COVERAGE_FRAC = 0.20   # regulatory cap: 20 % of active wells per survey
 N_ITER               = 500    # Monte Carlo iterations for stable statistics
+SPATIAL_WIND_GRADIENT_FRACTION = 0.25
+SPATIAL_WIND_NOISE_STD = 0.35
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -102,57 +117,112 @@ pod_vec = np.vectorize(pod_gml2)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SECTION 3 — WIND SAMPLING  (from TMY or uniform fallback)
+# SECTION 3 — FEAST FIELD + WIND FIELD SAMPLING
 # ══════════════════════════════════════════════════════════════════════════════
 
-def load_flyable_winds(tmy_path: Path) -> np.ndarray:
-    """Load wind speeds from TMY CSV, filtered to flyable range."""
+def build_feast_reference_field(n_sites: int, tmy_path: Path) -> GasField | None:
+    """Create a minimal FEAST GasField so the analysis uses FEAST met loading."""
     if not tmy_path.exists():
         print(f"  [WARN] TMY file not found: {tmy_path}")
-        print(f"  [WARN] Falling back to uniform U[{MIN_WIND_MS}, {MAX_WIND_MS}] m/s.")
+        print(f"  [WARN] Falling back to synthetic U[{MIN_WIND_MS}, {MAX_WIND_MS}] m/s winds.")
         return None
 
-    # TMY-DataExample.csv has a comment row on line 1; real headers on line 2
-    df = pd.read_csv(tmy_path, skiprows=1)
-    col = None
-    for c in df.columns:
-        if 'wind' in c.lower() and 'speed' in c.lower():
-            col = c; break
-        if c.lower() in ('windspeed', 'wind_speed', 'ws'):
-            col = c; break
-    if col is None:
-        print(f"  [WARN] Cannot find wind column. Available: {df.columns.tolist()}")
-        return None
+    time = Time(delta_t=1 / 24, end_time=365)
+    dummy_component = Component(name='bridger_reference_component', emission_production_rate=0, emission_per_comp=0)
+    dummy_site = Site(
+        name='bridger_reference_site',
+        comp_dict={'bridger_reference_component': {'number': 1, 'parameters': dummy_component}},
+        prod_dat=None,
+    )
+    return GasField(
+        time=time,
+        sites={'bridger_reference_site': {'number': n_sites, 'parameters': dummy_site}},
+        emissions=Emission(),
+        met_data_path=str(tmy_path),
+    )
 
-    winds = pd.to_numeric(df[col], errors='coerce').dropna().values
+
+def summarize_feast_met(feast_field: GasField | None) -> np.ndarray | None:
+    """Return FEAST flyable winds and print a concise summary."""
+    if feast_field is None:
+        return None
+    winds = np.asarray(feast_field.met['wind speed'], dtype=float)
     flyable = winds[(winds >= MIN_WIND_MS) & (winds <= MAX_WIND_MS)]
     if len(flyable) == 0:
         print(f"  [WARN] No flyable wind hours found. Using uniform [{MIN_WIND_MS},{MAX_WIND_MS}] m/s.")
         return None
-    print(f"  TMY wind: {len(winds):,} hours | flyable {len(flyable):,} hrs "
-          f"({100*len(flyable)/len(winds):.0f}%) | "
-          f"mean flyable={flyable.mean():.2f} m/s")
+    print(f"  FEAST met hours: {len(winds):,} | flyable {len(flyable):,} "
+          f"({100*len(flyable)/len(winds):.0f}%) | mean flyable={flyable.mean():.2f} m/s")
     return flyable
+
+
+def sample_spatial_wind_field(coords: np.ndarray,
+                              feast_field: GasField | None,
+                              flyable_winds: np.ndarray | None) -> dict:
+    """Create a survey-scale wind map across wells from a FEAST TMY snapshot."""
+    n_sites = len(coords)
+    if feast_field is None or flyable_winds is None:
+        base_wind = float(np.random.uniform(MIN_WIND_MS, MAX_WIND_MS))
+        wind_direction = float(np.random.uniform(0.0, 360.0))
+    else:
+        flyable_hours = np.flatnonzero(
+            (feast_field.met['wind speed'] >= MIN_WIND_MS) &
+            (feast_field.met['wind speed'] <= MAX_WIND_MS)
+        )
+        sampled_hour = int(np.random.choice(flyable_hours))
+        base_wind = float(feast_field.met['wind speed'][sampled_hour])
+        wind_direction = float(feast_field.met['wind direction'][sampled_hour])
+
+    centered = coords - coords.mean(axis=0, keepdims=True)
+    lon_km = centered[:, 0] * 111.0 * np.cos(np.radians(coords[:, 1].mean()))
+    lat_km = centered[:, 1] * 111.0
+
+    theta = np.radians(wind_direction)
+    along_wind = lon_km * np.sin(theta) + lat_km * np.cos(theta)
+    if np.allclose(along_wind.std(), 0.0):
+        gradient_component = np.zeros(n_sites)
+    else:
+        gradient_component = along_wind / along_wind.std()
+
+    noise_component = np.random.normal(loc=0.0, scale=SPATIAL_WIND_NOISE_STD, size=n_sites)
+    local_winds = base_wind * (1.0 + SPATIAL_WIND_GRADIENT_FRACTION * gradient_component) + noise_component
+    local_winds = np.clip(local_winds, MIN_WIND_MS, MAX_WIND_MS)
+
+    return {
+        'base_wind_ms': base_wind,
+        'wind_direction_deg': wind_direction,
+        'wind_map_ms': local_winds,
+        'wind_min_ms': float(local_winds.min()),
+        'wind_mean_ms': float(local_winds.mean()),
+        'wind_max_ms': float(local_winds.max()),
+        'wind_std_ms': float(local_winds.std()),
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 4 — ONE SURVEY SIMULATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-def simulate_one_survey(emissions: np.ndarray,
+def simulate_one_survey(portfolio_df: pd.DataFrame,
                         coverage_frac: float,
+                        feast_field: GasField | None,
                         flyable_winds: np.ndarray | None) -> dict:
     """
     Simulate one Bridger survey pass.
 
     Args:
-        emissions    : array of per-well emission rates (kg/h), ALL wells
+        portfolio_df : full portfolio with emissions and coordinates
         coverage_frac: fraction of wells to survey (e.g. 0.20)
-        flyable_winds: 1-D array of flyable wind speeds to sample from
-                       (None → uniform [MIN, MAX])
+        feast_field  : FEAST GasField carrying TMY met data
+        flyable_winds: flyable FEAST winds (None → uniform fallback)
 
     Returns dict with:
-        wind_ms              — sampled wind speed for this survey
+        base_wind_ms         — FEAST sampled wind speed for the survey hour
+        wind_direction_deg   — FEAST sampled wind direction for the survey hour
+        wind_mean_ms         — mean of the spatial wind field over surveyed wells
+        wind_min_ms          — minimum surveyed-well wind
+        wind_max_ms          — maximum surveyed-well wind
+        wind_std_ms          — standard deviation of surveyed-well winds
         n_surveyed           — number of wells surveyed
         emissions_total      — total emissions of the FULL portfolio (kg/h)
         emissions_surveyed   — total emissions at the SURVEYED wells (kg/h)
@@ -162,21 +232,20 @@ def simulate_one_survey(emissions: np.ndarray,
         avg_pod              — mean POD across surveyed wells
         wells_detected       — count of detected wells
     """
+    emissions = portfolio_df['emission_rate_kgph'].to_numpy()
+    coords = portfolio_df[['Longitude', 'Latitude']].to_numpy()
     n_total   = len(emissions)
     n_survey  = int(n_total * coverage_frac)
 
     # random subset WITHOUT replacement (fair random sampling)
     idx_survey = np.random.choice(n_total, size=n_survey, replace=False)
     em_survey  = emissions[idx_survey]
+    coords_survey = coords[idx_survey]
 
-    # wind for this flight day
-    if flyable_winds is not None:
-        wind_ms = float(np.random.choice(flyable_winds))
-    else:
-        wind_ms = float(np.random.uniform(MIN_WIND_MS, MAX_WIND_MS))
+    wind_snapshot = sample_spatial_wind_field(coords_survey, feast_field, flyable_winds)
 
-    # compute POD for each surveyed well
-    pods = pod_vec(em_survey, wind_ms)
+    # compute POD for each surveyed well using its local wind value
+    pods = pod_vec(em_survey, wind_snapshot['wind_map_ms'])
 
     # Bernoulli draw: each well is independently detected with probability = pod
     detected_mask = np.random.binomial(1, pods).astype(bool)
@@ -186,7 +255,6 @@ def simulate_one_survey(emissions: np.ndarray,
     em_detected   = em_survey[detected_mask].sum()
 
     return {
-        'wind_ms'            : wind_ms,
         'n_surveyed'         : n_survey,
         'emissions_total'    : em_total,
         'emissions_surveyed' : em_surveyed,
@@ -195,11 +263,18 @@ def simulate_one_survey(emissions: np.ndarray,
         'pct_of_surveyed'    : 100.0 * em_detected / em_surveyed,    # denominator B
         'avg_pod'            : float(pods.mean()),
         'wells_detected'     : int(detected_mask.sum()),
+        'base_wind_ms'       : wind_snapshot['base_wind_ms'],
+        'wind_direction_deg' : wind_snapshot['wind_direction_deg'],
+        'wind_mean_ms'       : wind_snapshot['wind_mean_ms'],
+        'wind_min_ms'        : wind_snapshot['wind_min_ms'],
+        'wind_max_ms'        : wind_snapshot['wind_max_ms'],
+        'wind_std_ms'        : wind_snapshot['wind_std_ms'],
     }
 
 
-def build_mitigation_concentration_table(emissions: np.ndarray,
+def build_mitigation_concentration_table(portfolio_df: pd.DataFrame,
                                          coverage_frac: float,
+                                         feast_field: GasField | None,
                                          flyable_winds: np.ndarray | None,
                                          n_iter: int,
                                          n_bins: int = 10) -> pd.DataFrame:
@@ -210,6 +285,9 @@ def build_mitigation_concentration_table(emissions: np.ndarray,
     highest-emitting wells (large-emitter capture) rather than broad detection
     of most emitters.
     """
+    emissions = portfolio_df['emission_rate_kgph'].to_numpy()
+    coords = portfolio_df[['Longitude', 'Latitude']].to_numpy()
+
     # Rank-based bins avoid duplicate-edge failures when many wells share
     # identical emission values.
     order = np.argsort(emissions)
@@ -232,12 +310,9 @@ def build_mitigation_concentration_table(emissions: np.ndarray,
     for _ in range(n_iter):
         idx_survey = np.random.choice(n_total, size=n_survey, replace=False)
         em_survey = emissions[idx_survey]
-        if flyable_winds is not None:
-            wind_ms = float(np.random.choice(flyable_winds))
-        else:
-            wind_ms = float(np.random.uniform(MIN_WIND_MS, MAX_WIND_MS))
-
-        pods = pod_vec(em_survey, wind_ms)
+        coords_survey = coords[idx_survey]
+        wind_snapshot = sample_spatial_wind_field(coords_survey, feast_field, flyable_winds)
+        pods = pod_vec(em_survey, wind_snapshot['wind_map_ms'])
         detected = np.random.binomial(1, pods).astype(bool)
         bin_ids = all_bin_ids[idx_survey]
 
@@ -277,9 +352,11 @@ def main():
     print(f"\n[1] DATA: {DATA_PATH}")
     assert DATA_PATH.exists(), f"Data not found: {DATA_PATH}"
     df_raw = pd.read_csv(DATA_PATH)
-    assert 'emission_rate_kgph' in df_raw.columns, \
-        f"Expected 'emission_rate_kgph' column. Got: {df_raw.columns.tolist()}"
-    emissions = df_raw['emission_rate_kgph'].values
+    required_cols = {'Longitude', 'Latitude', 'emission_rate_kgph'}
+    missing_cols = required_cols.difference(df_raw.columns)
+    assert not missing_cols, f"Missing required columns: {sorted(missing_cols)}"
+    portfolio_df = df_raw[['Longitude', 'Latitude', 'emission_rate_kgph']].copy()
+    emissions = portfolio_df['emission_rate_kgph'].to_numpy()
 
     n_wells        = len(emissions)
     total_em       = emissions.sum()
@@ -310,8 +387,11 @@ def main():
           f"POD = {pod_gml2(median_em, 3.5):.3f}")
 
     # ── Wind data ──────────────────────────────────────────────────────────────
-    print(f"\n[3] WIND DATA: {TMY_PATH}")
-    flyable_winds = load_flyable_winds(TMY_PATH)
+    print(f"\n[3] FEAST FIELD + WIND DATA: {TMY_PATH}")
+    feast_field = build_feast_reference_field(n_wells, TMY_PATH)
+    flyable_winds = summarize_feast_met(feast_field)
+    print("  Wind model          : FEAST TMY snapshot + spatial wind field over surveyed wells")
+    print("  Spatial variation   : coordinate-based gradient + stochastic local variability")
 
     # ── Monte Carlo survey simulation ──────────────────────────────────────────
     print(f"\n[4] MONTE CARLO SIMULATION")
@@ -319,11 +399,12 @@ def main():
           f"({int(n_wells * SURVEY_COVERAGE_FRAC):,} wells / survey)")
     print(f"  Iterations         : {N_ITER}")
     print(f"  Well selection     : random without replacement (each run)")
+    print(f"  Wind handling      : per-well wind map, not one wind for the whole survey")
     print(f"  Bernoulli detection: independent per well")
     print()
 
     results = [
-        simulate_one_survey(emissions, SURVEY_COVERAGE_FRAC, flyable_winds)
+        simulate_one_survey(portfolio_df, SURVEY_COVERAGE_FRAC, feast_field, flyable_winds)
         for _ in range(N_ITER)
     ]
     res_df = pd.DataFrame(results)
@@ -353,7 +434,9 @@ def main():
     pprint("% of TOTAL portfolio  [denom A]",   pct_total, "%")
     pprint("% of SURVEYED portion [denom B]",   pct_survey, "%")
     pprint("Average POD (surveyed wells)",       avg_pod_all)
-    pprint("Wind speed",                         res_df['wind_ms'], " m/s")
+    pprint("Base FEAST wind speed",              res_df['base_wind_ms'], " m/s")
+    pprint("Survey mean wind",                   res_df['wind_mean_ms'], " m/s")
+    pprint("Survey wind std. dev.",              res_df['wind_std_ms'], " m/s")
     print()
 
     # Explain both denominators clearly
@@ -403,8 +486,9 @@ def main():
 
     # ── Large-emitter attribution analysis ───────────────────────────────────
     conc_df = build_mitigation_concentration_table(
-        emissions=emissions,
+        portfolio_df=portfolio_df,
         coverage_frac=SURVEY_COVERAGE_FRAC,
+        feast_field=feast_field,
         flyable_winds=flyable_winds,
         n_iter=N_ITER,
         n_bins=10,
@@ -558,11 +642,11 @@ def main():
   feast/EmissionSimModules/result_classes.py
     CHANGE: np.infty → np.inf  (deprecation fix)
 
-  VERDICT: All changes are Python/NumPy deprecation fixes.
-           Detection physics, emission simulation logic, and all
-           numerical calculations are IDENTICAL to upstream FEAST.
-           No detection thresholds, probabilities, or emission rates
-           were altered in any original FEAST file.
+  VERDICT: Original FEAST package files only carry compatibility fixes.
+           This Bridger analysis script is a custom wrapper around FEAST's
+           met-data loading, not an upstream FEAST detection module.
+           FEAST code was not altered for this run, but the survey logic here
+           is analysis-specific and now applies a spatial wind field across wells.
 """)
 
     print(separator)
@@ -570,7 +654,10 @@ def main():
     print(separator)
     print(f"""
   Data verified          : {n_wells:,} wells, {total_em:,.1f} kg/h total
-  POD model              : SI Combined GML 2.0, DINWD_N=0.013 (both analysis files)
+  POD model              : SI Combined GML 2.0, DINWD_N=0.013
+  FEAST integration      : uses FEAST GasField/TMY met loading for survey-hour weather
+  Wind treatment         : spatial wind map across surveyed wells, not one survey-wide wind
+  Limitation             : not a true gridded mesoscale weather product
   Bug fixed (this run)   : bridger_spatial_survey.py DINWD_N was 1.0 → now 0.013
   Bug fixed (this run)   : ANALYSIS.md results used OLD logistic POD (stale)
 
