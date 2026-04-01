@@ -20,6 +20,8 @@ but is inconsistent with how FEAST generates emissions.
 import json
 import pickle
 import sys
+import urllib.request
+import urllib.parse
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +34,7 @@ if str(REPO_ROOT) not in sys.path:
 
 # Paths
 DATA_PATH = Path(__file__).parent / "feast_emissions.csv"
-TMY_PATH = Path(__file__).parent.parent / "ExampleData" / "TMY-DataExample.csv"
+TMY_PATH = Path(__file__).parent.parent / "ExampleData" / "TMY-DataExample.csv"  # fallback
 EMISSION_DIST_PATH = (
     Path(__file__).parent.parent
     / "ExampleData"
@@ -41,6 +43,15 @@ EMISSION_DIST_PATH = (
 )
 OUT_DIR = Path(__file__).parent / "BridgerResults"
 OUT_DIR.mkdir(exist_ok=True)
+
+# Historical ERA5 wind settings (Open-Meteo free API, no key required)
+# Centroid for the PA Marcellus/Appalachian basin well cluster.
+# Override these if your wells are concentrated elsewhere in PA.
+PA_WIND_LAT = 41.0
+PA_WIND_LON = -79.5
+PA_WIND_START = "2024-04-01"   # ~2 years back from April 2026
+PA_WIND_END   = "2026-03-31"
+WIND_CACHE_PATH = OUT_DIR / "pa_historical_winds.csv"
 
 
 # Bridger SI Combined GML 2.0 POD parameters
@@ -98,17 +109,69 @@ def load_emission_distribution(path: Path) -> np.ndarray:
 
 
 def load_tmy_flyable_winds(tmy_path: Path) -> np.ndarray | None:
-    """
-    Return array of wind speeds (m/s) from TMY hours that are within the
-    Bridger operational window [MIN_WIND_MS, MAX_WIND_MS].
-
-    FEAST reads TMY with header=1 (second CSV row contains column names).
-    """
+    """TMY fallback: flyable wind speeds from the FEAST TMY CSV."""
     if not tmy_path.exists():
         return None
     met = pd.read_csv(tmy_path, header=1)
     speeds = met["wind speed (m/s)"].to_numpy(dtype=float)
     flyable = speeds[(speeds >= MIN_WIND_MS) & (speeds <= MAX_WIND_MS)]
+    return flyable if len(flyable) > 0 else None
+
+
+def load_historical_winds(
+    cache_path: Path,
+    lat: float = PA_WIND_LAT,
+    lon: float = PA_WIND_LON,
+    start: str = PA_WIND_START,
+    end: str = PA_WIND_END,
+    tmy_fallback: Path | None = None,
+) -> np.ndarray:
+    """
+    Return an array of hourly 10 m wind speeds (m/s) for the PA basin.
+
+    Strategy:
+      1. If the cache CSV already exists, load from it (instant).
+      2. Otherwise fetch 2 years of ERA5-based hourly wind from the
+         Open-Meteo Historical Weather API (free, no key required) and
+         save to cache_path so subsequent runs are instant.
+      3. If the fetch fails (e.g. offline), fall back to the FEAST TMY file.
+
+    Only the hours within the Bridger operational window [MIN_WIND_MS,
+    MAX_WIND_MS] are returned; each MC iteration samples one of these.
+    """
+    # --- 1. load from cache ---
+    if cache_path.exists():
+        df = pd.read_csv(cache_path)
+        speeds = df["wind_speed_10m"].to_numpy(dtype=float)
+        flyable = speeds[(speeds >= MIN_WIND_MS) & (speeds <= MAX_WIND_MS)]
+        if len(flyable) > 0:
+            return flyable
+
+    # --- 2. fetch from Open-Meteo ---
+    params = urllib.parse.urlencode({
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start,
+        "end_date": end,
+        "hourly": "wind_speed_10m",
+        "wind_speed_unit": "ms",
+        "timezone": "America/New_York",
+    })
+    url = f"https://archive-api.open-meteo.com/v1/archive?{params}"
+    try:
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            data = json.loads(resp.read())
+        times  = data["hourly"]["time"]
+        speeds = data["hourly"]["wind_speed_10m"]
+        cache_df = pd.DataFrame({"time": times, "wind_speed_10m": speeds})
+        cache_df.to_csv(cache_path, index=False)
+        print(f"  Fetched {len(speeds):,} hourly wind records from Open-Meteo → cached to {cache_path.name}")
+        arr = np.array(speeds, dtype=float)
+    except Exception as exc:
+        print(f"  WARNING: Open-Meteo fetch failed ({exc}). Falling back to TMY.")
+        return load_tmy_flyable_winds(tmy_fallback) if tmy_fallback else None
+
+    flyable = arr[(arr >= MIN_WIND_MS) & (arr <= MAX_WIND_MS)]
     return flyable if len(flyable) > 0 else None
 
 
@@ -277,7 +340,9 @@ def main() -> None:
     n_sites = len(coords)
 
     leak_dist = load_emission_distribution(EMISSION_DIST_PATH)
-    flyable_winds = load_tmy_flyable_winds(TMY_PATH)
+    print(f"Loading historical ERA5 winds for PA ({PA_WIND_LAT}N, {PA_WIND_LON}E)  "
+          f"{PA_WIND_START} → {PA_WIND_END} ...")
+    flyable_winds = load_historical_winds(WIND_CACHE_PATH, tmy_fallback=TMY_PATH)
 
     expected_leaks = N_COMPS_PER_SITE * EMISSION_PER_COMP
     expected_total_kgph = expected_leaks * leak_dist.mean() * GS_TO_KGPH
@@ -289,8 +354,10 @@ def main() -> None:
     print(f"Expected leaks/site: {expected_leaks:.2f}  "
           f"expected site total: {expected_total_kgph:.3f} kg/h")
     if flyable_winds is not None:
-        print(f"TMY flyable-window hours: {len(flyable_winds):,}  "
-              f"mean {flyable_winds.mean():.2f} m/s")
+        wind_source = "ERA5/Open-Meteo" if WIND_CACHE_PATH.exists() else "TMY fallback"
+        print(f"Wind pool ({wind_source}): {len(flyable_winds):,} flyable hours  "
+              f"mean={flyable_winds.mean():.2f} m/s  "
+              f"p10={np.percentile(flyable_winds,10):.2f}  p90={np.percentile(flyable_winds,90):.2f} m/s")
     print(f"Iterations: {N_ITER}, survey coverage: {100 * SURVEY_COVERAGE_FRAC:.0f}%")
     print()
 
