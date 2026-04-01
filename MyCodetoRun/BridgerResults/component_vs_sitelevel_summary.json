@@ -1,0 +1,33 @@
+{
+  "approach": "feast_bottom_up",
+  "n_sites": 64624,
+  "n_comps_per_site": 650,
+  "emission_per_comp": 0.00231,
+  "emission_dist_n_samples": 4221,
+  "emission_dist_mean_gs": 0.0806733627213817,
+  "emission_dist_median_gs": 0.018102208333333335,
+  "iterations": 500,
+  "survey_coverage_frac": 0.2,
+  "site_total_method": {
+    "mean_pct_total": 16.609972227588855,
+    "ci95_pct_total": [
+      14.980684961980382,
+      18.439086810883257
+    ]
+  },
+  "component_method": {
+    "mean_pct_total": 14.857101998922833,
+    "ci95_pct_total": [
+      13.115651590467516,
+      16.97421344969123
+    ]
+  },
+  "overestimate": {
+    "mean_pct_points": 1.7528702286660234,
+    "ci95_pct_points": [
+      1.4469123798192745,
+      2.0132329829263784
+    ],
+    "mean_relative_pct": 11.914971789170071
+  }
+}
