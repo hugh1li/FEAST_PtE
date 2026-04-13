@@ -1,0 +1,431 @@
+{
+  "analysis_grounding": {
+    "pod_model_source": "Thorpe et al. 2024, RSE, doi:10.1016/j.rse.2024.114435",
+    "marcellus_pod90_kgph": 0.974,
+    "marcellus_pod90_source": "Thorpe 2024 Fig 5 right table, Marcellus basin",
+    "flight_plan_source": "Donahue et al. 2024 (Permian preprint), Table 1",
+    "permian_marginal_per_day": 130.0,
+    "pa_marginal_per_day": 100.0
+  },
+  "portfolio": {
+    "n_wells": 64624,
+    "total_emissions_kgph": 55389.0,
+    "mean_kgph": 0.8570964347610794,
+    "median_kgph": 0.108
+  },
+  "emission_concentration": {
+    "1": {
+      "top_pct_wells": 1,
+      "n_wells": 646,
+      "emission_share_pct": 37.40113280941641,
+      "min_emission_in_group": 12.420573576126326
+    },
+    "2": {
+      "top_pct_wells": 2,
+      "n_wells": 1292,
+      "emission_share_pct": 48.1502107796881,
+      "min_emission_in_group": 7.161345362603604
+    },
+    "5": {
+      "top_pct_wells": 5,
+      "n_wells": 3231,
+      "emission_share_pct": 64.4353631268022,
+      "min_emission_in_group": 3.1494875672353793
+    },
+    "10": {
+      "top_pct_wells": 10,
+      "n_wells": 6462,
+      "emission_share_pct": 76.95993853597147,
+      "min_emission_in_group": 1.4939160609382973
+    },
+    "20": {
+      "top_pct_wells": 20,
+      "n_wells": 12924,
+      "emission_share_pct": 88.12816338372612,
+      "min_emission_in_group": 0.6144404921621878
+    },
+    "30": {
+      "top_pct_wells": 30,
+      "n_wells": 19387,
+      "emission_share_pct": 93.34240508156047,
+      "min_emission_in_group": 0.3199765451756111
+    },
+    "50": {
+      "top_pct_wells": 50,
+      "n_wells": 32312,
+      "emission_share_pct": 97.87779761297641,
+      "min_emission_in_group": 0.11051031725719228
+    },
+    "70": {
+      "top_pct_wells": 70,
+      "n_wells": 45236,
+      "emission_share_pct": 99.4708510539233,
+      "min_emission_in_group": 0.03757630104503762
+    }
+  },
+  "detection_thresholds": {
+    "0.1": {
+      "threshold_kgph": 0.1,
+      "n_wells_above": 33497,
+      "pct_wells_above": 51.83368408021788,
+      "emissions_above_kgph": 54338.181772926844,
+      "pct_emissions_above": 98.10283950410226
+    },
+    "0.5": {
+      "threshold_kgph": 0.5,
+      "n_wells_above": 14864,
+      "pct_wells_above": 23.000742758108444,
+      "emissions_above_kgph": 49887.358673457784,
+      "pct_emissions_above": 90.06726727952864
+    },
+    "0.974": {
+      "threshold_kgph": 0.974,
+      "n_wells_above": 9216,
+      "pct_wells_above": 14.26095568209953,
+      "emissions_above_kgph": 45947.692637368076,
+      "pct_emissions_above": 82.95454447158892
+    },
+    "1.0": {
+      "threshold_kgph": 1.0,
+      "n_wells_above": 9037,
+      "pct_wells_above": 13.983968804159446,
+      "emissions_above_kgph": 45770.961889669255,
+      "pct_emissions_above": 82.63547254810442
+    },
+    "1.27": {
+      "threshold_kgph": 1.27,
+      "n_wells_above": 7423,
+      "pct_wells_above": 11.48644466452092,
+      "emissions_above_kgph": 43950.36597092431,
+      "pct_emissions_above": 79.34854568763582
+    },
+    "2.0": {
+      "threshold_kgph": 2.0,
+      "n_wells_above": 4999,
+      "pct_wells_above": 7.735516216885368,
+      "emissions_above_kgph": 40105.58067624933,
+      "pct_emissions_above": 72.40712176831067
+    },
+    "5.0": {
+      "threshold_kgph": 5.0,
+      "n_wells_above": 1978,
+      "pct_wells_above": 3.060782371874226,
+      "emissions_above_kgph": 30756.08304797813,
+      "pct_emissions_above": 55.52742069360042
+    }
+  },
+  "flight_plan": {
+    "permian_benchmark": {
+      "marginal_wells_per_quarter": 6357,
+      "flying_days_per_quarter": 48.8,
+      "marginal_wells_per_day": 130.0
+    },
+    "pa_adjusted": {
+      "wells_per_day": 100.0,
+      "flyable_days_per_year": 150,
+      "wells_per_year": 15061,
+      "portfolio_coverage_pct": 23.3,
+      "days_to_complete_full_portfolio": 644.0,
+      "years_to_complete_full_portfolio": 4.29
+    },
+    "quarterly_schedule": {
+      "Q1_Jan_Mar": {
+        "wells": 3816.0,
+        "days": 38
+      },
+      "Q2_Apr_Jun": {
+        "wells": 4016.0,
+        "days": 40
+      },
+      "Q3_Jul_Sep": {
+        "wells": 3514.0,
+        "days": 35
+      },
+      "Q4_Oct_Dec": {
+        "wells": 3715.0,
+        "days": 37
+      },
+      "note": "PA winter/fall months have more weather delays; Q2/Q3 preferred"
+    }
+  },
+  "monte_carlo_results": {
+    "One season (Q2+Q3, ~75 days)": {
+      "coverage_pct": 11.600000000000001,
+      "n_iter": 1000,
+      "emissions_detected_kgph": {
+        "mean": 5167.717535365817,
+        "std": 526.0414230949322,
+        "p5": 4419.754478341687,
+        "p25": 4802.4523305119765,
+        "median": 5113.418393871057,
+        "p75": 5465.074786572368,
+        "p95": 6177.680450555738
+      },
+      "mitigation_pct": {
+        "mean": 9.329862491407711,
+        "std": 0.9497218276100529,
+        "p5": 7.979480543685005,
+        "p25": 8.670408078340422,
+        "median": 9.231830135714777,
+        "p75": 9.866715027482655,
+        "p95": 11.153262291349797
+      },
+      "n_detected": {
+        "mean": 1239.279,
+        "std": 222.32008267135922,
+        "p5": 904.95,
+        "p25": 1080.0,
+        "median": 1222.0,
+        "p75": 1375.25,
+        "p95": 1624.1499999999999
+      },
+      "detection_rate_by_count": {
+        "mean": 16.532537353255073,
+        "std": 2.9658495553809927,
+        "p5": 12.0724386339381,
+        "p25": 14.4076840981857,
+        "median": 16.302027748132335,
+        "p75": 18.346451440768412,
+        "p95": 21.666889007470647
+      },
+      "avg_pod": {
+        "mean": 0.16529542158446092,
+        "std": 0.02947282353336211,
+        "p5": 0.12065342400884278,
+        "p25": 0.144512884667898,
+        "median": 0.16329709765607608,
+        "p75": 0.18420413540151523,
+        "p95": 0.21466166221484895
+      },
+      "wind_ms": {
+        "mean": 3.4972281990199163,
+        "std": 0.8837804679265885,
+        "p5": 2.0394551584368137,
+        "p25": 2.8856695991401775,
+        "median": 3.474931125931917,
+        "p75": 4.0968036848327625,
+        "p95": 4.939271263329654
+      },
+      "top5_detected_pct_of_total_top5": {
+        "mean": 11.391741703740387,
+        "std": 1.3680650487620445,
+        "p5": 9.52931462642472,
+        "p25": 10.416445307354493,
+        "median": 11.194669720413504,
+        "p75": 12.084934268327167,
+        "p95": 14.128322288774953
+      }
+    },
+    "1 year - moderate (150 days)": {
+      "coverage_pct": 23.21119088883387,
+      "n_iter": 1000,
+      "emissions_detected_kgph": {
+        "mean": 10366.359270127694,
+        "std": 763.6802702349567,
+        "p5": 9155.311441165206,
+        "p25": 9847.099514931122,
+        "median": 10302.032953512717,
+        "p75": 10903.65543540079,
+        "p95": 11668.861316876675
+      },
+      "mitigation_pct": {
+        "mean": 18.71555592288666,
+        "std": 1.3787580029156634,
+        "p5": 16.52911488050914,
+        "p25": 17.778077804132813,
+        "median": 18.59942037861799,
+        "p75": 19.685597204139434,
+        "p95": 21.06710956485345
+      },
+      "n_detected": {
+        "mean": 2489.728,
+        "std": 450.90295188210956,
+        "p5": 1778.8,
+        "p25": 2182.0,
+        "median": 2454.0,
+        "p75": 2763.25,
+        "p95": 3297.1
+      },
+      "detection_rate_by_count": {
+        "mean": 16.598186666666667,
+        "std": 3.0060196792140634,
+        "p5": 11.858666666666666,
+        "p25": 14.546666666666667,
+        "median": 16.36,
+        "p75": 18.421666666666667,
+        "p95": 21.980666666666668
+      },
+      "avg_pod": {
+        "mean": 0.165982586740076,
+        "std": 0.030049693472352295,
+        "p5": 0.11814549225874471,
+        "p25": 0.14533888922169835,
+        "median": 0.16391349870806293,
+        "p75": 0.18406611187664534,
+        "p95": 0.21949674127661564
+      },
+      "wind_ms": {
+        "mean": 3.511930400121476,
+        "std": 0.8956978290675676,
+        "p5": 1.9791824885245766,
+        "p25": 2.93181283924927,
+        "median": 3.5110796361865027,
+        "p75": 4.108993212564471,
+        "p95": 5.004167174749466
+      },
+      "top5_detected_pct_of_total_top5": {
+        "mean": 22.847855324917337,
+        "std": 1.7975028747400463,
+        "p5": 20.266317543006544,
+        "p25": 21.583166118843508,
+        "median": 22.587020577472636,
+        "p75": 23.982546454029023,
+        "p95": 25.996547955272177
+      }
+    },
+    "1 year - ambitious (Permian rate, 150 days @ 130/day)": {
+      "coverage_pct": 30.174548155484032,
+      "n_iter": 1000,
+      "emissions_detected_kgph": {
+        "mean": 13538.611941908124,
+        "std": 891.7819997064588,
+        "p5": 12061.716737365912,
+        "p25": 12978.992874114221,
+        "median": 13548.528546046036,
+        "p75": 14093.906616528962,
+        "p95": 15041.404237644505
+      },
+      "mitigation_pct": {
+        "mean": 24.442780952730914,
+        "std": 1.6100344828512136,
+        "p5": 21.77637570161208,
+        "p25": 23.43243762139454,
+        "median": 24.460684515059015,
+        "p75": 25.44531697002828,
+        "p95": 27.155941139295724
+      },
+      "n_detected": {
+        "mean": 3244.95,
+        "std": 589.8342237442653,
+        "p5": 2344.85,
+        "p25": 2822.0,
+        "median": 3213.0,
+        "p75": 3640.5,
+        "p95": 4264.2
+      },
+      "detection_rate_by_count": {
+        "mean": 16.64076923076923,
+        "std": 3.0247908909962327,
+        "p5": 12.024871794871794,
+        "p25": 14.471794871794872,
+        "median": 16.47692307692308,
+        "p75": 18.66923076923077,
+        "p95": 21.86769230769231
+      },
+      "avg_pod": {
+        "mean": 0.16638764163917547,
+        "std": 0.030251905225437612,
+        "p5": 0.12027800592558033,
+        "p25": 0.14443838913976806,
+        "median": 0.16423908249050234,
+        "p75": 0.18684901489993244,
+        "p95": 0.21952948503054912
+      },
+      "wind_ms": {
+        "mean": 3.523250180863327,
+        "std": 0.9016079225334056,
+        "p5": 2.075369823525247,
+        "p25": 2.898181688004958,
+        "median": 3.5125725045479124,
+        "p75": 4.162773160975612,
+        "p95": 5.042514493608858
+      },
+      "top5_detected_pct_of_total_top5": {
+        "mean": 29.84902366607247,
+        "std": 1.9835241226862905,
+        "p5": 26.77201772654123,
+        "p25": 28.42950877460975,
+        "median": 29.721762444607975,
+        "p75": 31.238147593594448,
+        "p95": 33.279280490953056
+      }
+    },
+    "Full portfolio (single pass)": {
+      "coverage_pct": 100.0,
+      "n_iter": 1000,
+      "emissions_detected_kgph": {
+        "mean": 44674.02102588083,
+        "std": 1878.1443413774302,
+        "p5": 41423.62112940037,
+        "p25": 43453.024185864466,
+        "median": 44756.024110101294,
+        "p75": 46033.20258560485,
+        "p95": 47670.21809179587
+      },
+      "mitigation_pct": {
+        "mean": 80.65504166148664,
+        "std": 3.3908255093564255,
+        "p5": 74.78672864539959,
+        "p25": 78.45063854892572,
+        "median": 80.80309106519579,
+        "p75": 83.10892521187395,
+        "p95": 86.06441367743753
+      },
+      "n_detected": {
+        "mean": 10728.89,
+        "std": 1979.7285333853226,
+        "p5": 7703.05,
+        "p25": 9323.0,
+        "median": 10578.5,
+        "p75": 12029.0,
+        "p95": 14300.25
+      },
+      "detection_rate_by_count": {
+        "mean": 16.602020921020056,
+        "std": 3.0634571264318557,
+        "p5": 11.919797598415451,
+        "p25": 14.42652884377321,
+        "median": 16.369305521168606,
+        "p75": 18.613827680118842,
+        "p95": 22.12838883386977
+      },
+      "avg_pod": {
+        "mean": 0.1660136675599802,
+        "std": 0.030618535500230293,
+        "p5": 0.11965837067746106,
+        "p25": 0.14429950906162853,
+        "median": 0.16386363239614984,
+        "p75": 0.18601925065124858,
+        "p95": 0.22097616827406302
+      },
+      "wind_ms": {
+        "mean": 3.5156516648899068,
+        "std": 0.9138331799244641,
+        "p5": 2.0352561270144442,
+        "p25": 2.8932118813511165,
+        "median": 3.505776601634234,
+        "p75": 4.144552594506424,
+        "p95": 5.063430918432765
+      },
+      "top5_detected_pct_of_total_top5": {
+        "mean": 98.45900951444783,
+        "std": 0.8338349169804911,
+        "p5": 96.8055486764699,
+        "p25": 98.0704491919359,
+        "median": 98.63195957775045,
+        "p75": 99.03975797571432,
+        "p95": 99.46218320719049
+      }
+    }
+  },
+  "key_finding": {
+    "pct_fleet_detected_1yr": 3.8,
+    "pct_emissions_detected_1yr": 18.7,
+    "detection_enrichment_factor": 4.9,
+    "top5_emission_capture_pct": 22.8,
+    "pod_blind_spot_threshold_kgph": 0.325,
+    "pct_wells_in_blind_spot": 70.0,
+    "pct_emissions_in_blind_spot": 7.0,
+    "answer": "TOP EMITTERS, not most emitters: Bridger cannot detect the majority of wells (which emit below ~0.3 kg/h). But within surveyed wells, it reliably finds high emitters. The detected emission mass is dominated by top emitters because their PoD is near 100%."
+  }
+}
