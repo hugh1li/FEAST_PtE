@@ -3,6 +3,7 @@ This script provides an example of a custom FEAST simulation. The script defines
 and combines those components to create a variety of sites. The sites are then combined into a gas field that is used in
 the simulation. A component level survey, a tiered site level survey and a tiered site monitor program are simulated.
 """
+import math
 import numpy as np
 import copy
 import feast.EmissionSimModules.infrastructure_classes
@@ -13,7 +14,7 @@ import pickle
 import time
 
 def prob_curve(pts):
-    return 0.5 + 0.5 * np.array([np.math.erf((np.log(f) - np.log(0.02)) / (0.8 * np.sqrt(2))) for f in pts])
+    return 0.5 + 0.5 * np.array([math.erf((np.log(f) - np.log(0.02)) / (0.8 * np.sqrt(2))) for f in pts])
 
 
 def prob_pts(lower, upper):
@@ -169,7 +170,7 @@ def define_detection_methods(timeobj):
     points = np.logspace(-3, 1, 100)  # emission rates
     rep0 = Dm.repair.Repair(repair_delay=0)
     rep7 = Dm.repair.Repair(repair_delay=7)
-    probs = 0.5 + 0.5 * np.array([np.math.erf((np.log(f) - np.log(0.02)) / (0.8 * np.sqrt(2))) for f
+    probs = 0.5 + 0.5 * np.array([math.erf((np.log(f) - np.log(0.02)) / (0.8 * np.sqrt(2))) for f
                                   in points])
     probs[0] = 0
     sens = 0.1  # +- accuracy of intrument
@@ -204,7 +205,7 @@ def define_detection_methods(timeobj):
     )
     points = np.logspace(-3, 1, 100)
     # 0.474
-    probs = 0.5 + 0.5 * np.array([np.math.erf((np.log(f) - np.log(1.5)) / (1.36 * np.sqrt(2))) for f
+    probs = 0.5 + 0.5 * np.array([math.erf((np.log(f) - np.log(1.5)) / (1.36 * np.sqrt(2))) for f
                                   in points])
     probs[0] = 0
     plane_survey_dispatch_10 = Dm.site_survey.SiteSurvey(
@@ -270,7 +271,7 @@ def define_detection_methods(timeobj):
         timeobj,
         time_to_detect_points=[[0.5, 1], [1.0, 1], [1.1, 1], [0.5, 5], [1.0, 5], [1.1, 5],
                                [0.5, 5.1], [1.0, 5.1], [1.1, 5.1]],
-        time_to_detect_days=[np.infty, 1, 0, np.infty, 5, 0, np.infty, np.infty, np.infty],
+        time_to_detect_days=[np.inf, 1, 0, np.inf, 5, 0, np.inf, np.inf, np.inf],
         detection_variables={'flux': 'mean', 'wind speed': 'mean'},
         site_queue=list(range(gas_field.n_sites)),
         dispatch_object=copy.deepcopy(rep0),

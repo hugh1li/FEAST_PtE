@@ -83,9 +83,9 @@ class Emission:
         :return: Average emission rate between t1 and t0 (g/s)
         """
         em = self.get_emissions_in_range(t0, t1, reparable=reparable)
-        st = em['start_time'].to_numpy()
+        st = em['start_time'].to_numpy(copy=True)
         st[st < t0] = t0
-        et = em['end_time'].to_numpy()
+        et = em['end_time'].to_numpy(copy=True)
         et[et > t1] = t1
         duration = et - st
         return np.sum(duration * em.flux) / (t1 - t0)

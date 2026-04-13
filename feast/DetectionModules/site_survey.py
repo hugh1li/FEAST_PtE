@@ -93,7 +93,11 @@ class SiteSurvey(DetectionMethod):
                     # sum all emission variables needed for detection
                     vals[ind] = np.sum(emissions[v][cond])
                 ind += 1
-            prob = self.empirical_interpolator(self.detection_probability_points, self.detection_probabilities, vals)
+            prob = self.empirical_interpolator(
+                self.detection_probability_points,
+                self.detection_probabilities,
+                np.array([vals]),
+            )[0]
             probs[counter] = prob
             counter += 1
         scores = np.random.uniform(0, 1, n_scores)
