@@ -16,16 +16,17 @@ Key methodological choices:
      (NOT / total portfolio). This is the within-survey detection efficiency —
      how well the instrument found what it flew over.
 
-  4. PoD: Marcellus-specific threshold from Thorpe et al. 2024 (Fig.5):
-     PoD90 = 0.974 kg/h at 3.5 m/s wind. Wind sampled from PA climatology.
+  4. PoD: Combined GML 2.0 model from Thorpe et al. 2024, Table 3:
+     P4 predictor + Burr inverse link. Inputs: Q (kg/h), u (m/s), n = GCN/1000.
+     GCN = 16 ppm-m for Marcellus PA terrain (back-calculated from Fig.5 PoD90 = 0.974 kg/h).
 
-  5. Flight plan: grounded in Donahue et al. 2024 (Permian paper):
+  5. Flight plan: grounded in Donahue et al. 2025 (Permian paper):
      ~130 marginal wells/day in Permian → ~100/day for PA (terrain adjustment),
      ~150 flyable days/year (vs Permian 195), giving ~23% annual coverage.
 
 Sources:
   Thorpe et al. 2024, RSE 315:114435
-  Donahue et al. 2024, preprint ES&T
+  Donahue et al. 2025, preprint ES&T
 """
 
 import numpy as np
@@ -49,13 +50,27 @@ OUT_DIR     = Path('BridgerResults')
 OUT_DIR.mkdir(exist_ok=True)
 
 # ── Constants (all grounded in literature) ────────────────────────────────────
-POD90_MARCELLUS   = 0.974   # kg/h  Thorpe 2024 Fig.5 Marcellus mean
+# ── Combined GML 2.0 PoD model coefficients (Thorpe et al. 2024, Table 3) ──────
+# P4 predictor: g = β₁·Q^β₂ / (n^β₃·u^β₄)
+# Burr inverse link: PoD = 1 - (1 + g^α₁)^(-α₂)
+POD_ALPHA1 = 2.0000
+POD_ALPHA2 = 1.5000
+POD_BETA1  = 2.41e-3
+POD_BETA2  = 1.9505
+POD_BETA3  = 2.0836
+POD_BETA4  = 1.5185
+
+# GCN for Marcellus/PA terrain (gas concentration noise, ppm-m)
+# Back-calculated from Thorpe 2024 Fig.5: PoD₉₀ = 0.974 kg/h @ u=3.5 m/s → GCN ≈ 16 ppm-m
+# Validated: model gives PoD₉₀ = 0.978 kg/h at GCN=16, u=3.5 — within 0.4% of Fig.5 value.
+GCN_MARCELLUS     = 16.0    # ppm-m (between the 13 & 23 ppm-m reference values in Thorpe Fig.8)
+N_MARCELLUS       = GCN_MARCELLUS / 1000.0   # = 0.016
+
+# Legacy reporting constants (no longer used directly in PoD computation)
+POD90_MARCELLUS   = 0.974   # kg/h  Thorpe 2024 Fig.5 Marcellus mean (verification reference)
 POD90_OVERALL     = 1.27    # kg/h  Thorpe 2024 Fig.5 overall 2023 avg
-K_LOGISTIC        = 2.0     # logistic steepness (Conrad et al. 2023a)
-WIND_REF          = 3.5     # m/s   reference wind for PoD90 calibration
-WIND_EXP          = -0.3    # wind sensitivity coefficient (Thorpe 2024)
 WIND_MEAN_PA      = 3.5     # m/s   PA seasonal flying-window mean
-WIND_STD_PA       = 0.9     # m/s
+WIND_STD_PA       = 1.0     # m/s   (wider spread; PA wind more variable than Permian)
 WIND_MIN          = 1.0
 WIND_MAX          = 6.0
 
@@ -82,7 +97,7 @@ e_mean  = gdf_mean.mean_ch4_kgh.values          # 250-iteration mean per well
 # Stack all 250 FEAST iterations into a (N_WELLS × 250) array
 iter_cols = sorted([c for c in gdf_iter.columns if c.startswith('ch4_kgh_')])
 N_ITER    = len(iter_cols)
-print(f"  {N_WELLS:,} wells, {N_ITER} FEAST iterations. Building array …")
+print(f"  {N_WELLS:,} wells, {N_ITER} EIME iterations. Building array …")
 E_ITERS   = gdf_iter[iter_cols].values.astype(np.float32)   # shape (64624, 250)
 print(f"  Array shape: {E_ITERS.shape}, size {E_ITERS.nbytes/1e6:.0f} MB")
 
@@ -131,13 +146,31 @@ print(f"  Cells coverable per year: {n_cells_per_year} → {annual_wells_spatial
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 3. PoD MODEL
+# 3. PoD MODEL  — Combined GML 2.0, P4 predictor + Burr inverse link
 # ═══════════════════════════════════════════════════════════════════════════
-def pod(e, wind, pod90=POD90_MARCELLUS):
-    """Vectorised Bridger GML2.0 PoD (Thorpe/Conrad 2024)."""
-    e90_wind = pod90 * np.exp(WIND_EXP * (wind - WIND_REF))
-    e_safe   = np.maximum(e, 1e-9)
-    return np.clip(1.0 / (1.0 + np.exp(-K_LOGISTIC * np.log(e_safe / e90_wind))), 0, 1)
+def pod(e, wind, n=N_MARCELLUS):
+    """
+    Bridger GML 2.0 Probability of Detection.
+    Combined model: P4 predictor + Burr inverse link (Thorpe et al. 2024, Table 3).
+
+    g(Q, u, n) = β₁·Q^β₂ / (n^β₃·u^β₄)
+    PoD = 1 − (1 + g^α₁)^(−α₂)
+
+    Parameters
+    ----------
+    e    : emission rate (kg/h) — scalar or array
+    wind : wind speed (m/s)     — scalar or array
+    n    : GCN/1000              — default 0.016 = 16 ppm-m (Marcellus PA)
+    """
+    Q = np.maximum(e,    1e-9)
+    u = np.maximum(wind, 0.1)
+    g = POD_BETA1 * Q**POD_BETA2 / (n**POD_BETA3 * u**POD_BETA4)
+    return np.clip(1.0 - (1.0 + g**POD_ALPHA1)**(-POD_ALPHA2), 0.0, 1.0)
+
+# Verification: at Q=0.974 kg/h, u=3.5 m/s, n=0.016 → expected PoD₉₀ ≈ 0.974 kg/h (Thorpe Fig.5)
+_verify_pod90 = float(pod(np.array([0.974]), np.array([3.5])))
+print(f"PoD formula verification: pod(0.974 kg/h, 3.5 m/s, n=0.016) = {_verify_pod90:.3f} "
+      f"(expect ~0.900 for Marcellus PoD₉₀)")
 
 def sample_wind():
     return float(np.clip(np.random.normal(WIND_MEAN_PA, WIND_STD_PA), WIND_MIN, WIND_MAX))
@@ -177,7 +210,7 @@ for t, r in thresh_stats.items():
 # Per-iteration stats
 iter_totals = E_ITERS.sum(axis=0).astype(float)
 iter_above  = (E_ITERS > POD90_MARCELLUS).mean(axis=0) * 100
-print(f"\n  Across {N_ITER} FEAST iterations:")
+print(f"\n  Across {N_ITER} EIME iterations:")
 print(f"  Total emissions: {iter_totals.mean():.0f} ± {iter_totals.std():.0f} kg/h "
       f"[{iter_totals.min():.0f}–{iter_totals.max():.0f}]")
 print(f"  % wells > PoD90 threshold: {iter_above.mean():.1f}% ± {iter_above.std():.1f}%")
@@ -187,34 +220,90 @@ print(f"  % wells > PoD90 threshold: {iter_above.mean():.1f}% ± {iter_above.std
 # 5. MONTE CARLO SURVEY SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════
 # For each MC run:
-#   a. Select survey cells (geographic cluster selection)
+#   a. Select survey cells using CONTIGUOUS BLOCK routing (not random scatter):
+#      - pick a random seed cell, grow outward to geographic neighbours
+#      - represents a realistic deployment where the aircraft works one region
+#        before ferrying to the next; prevents teleporting across PA
 #   b. Draw random FEAST iteration  → snapshot emission state
 #   c. Draw random wind
 #   d. Apply PoD → Bernoulli detection
 #   e. DENOMINATOR = sum(emissions of SURVEYED wells in that iteration)
 #      NUMERATOR   = sum(emissions of DETECTED wells)
 #   f. mitigation% = numerator / denominator
+#
+# On logistics: the 0.1°×0.1° grid cells are ~11×8.5 km. Within a cell the
+# aircraft flies a lawnmower pattern in <1 day. Adjacent cells share a border
+# so the transit is trivial (~few minutes). "Ferrying" only happens when
+# jumping to the next separate block — we account for this implicitly by
+# capping at 150 flyable days (PA is compact enough that most well-field
+# clusters are within a 2–3 hour drive of each other).
 
-def run_survey_mc(target_coverage_pct, n_mc=N_MC, pod90=POD90_MARCELLUS):
+# Pre-build neighbour lookup (4-connected: N/S/E/W) for contiguous routing
+cell_id_set   = set(unique_cells)
+cell_id_to_ci = {c: i for i, c in enumerate(unique_cells)}
+
+def _cell_neighbours(cid):
+    """Return existing 4-connected neighbours of a cell_id (lat*1000+lon)."""
+    lat_i, lon_i = divmod(cid, 1000)
+    nbrs = []
+    for dlat, dlon in [(-1,0),(1,0),(0,-1),(0,1)]:
+        nb = (lat_i + dlat) * 1000 + (lon_i + dlon)
+        if nb in cell_id_set:
+            nbrs.append(nb)
+    return nbrs
+
+def _contiguous_cell_selection(target_wells):
     """
-    Monte Carlo survey simulation using spatial cell selection.
+    Grow a geographically contiguous set of cells starting from a random seed.
+    Returns an array of well indices from those cells.
+    Strategy: BFS from seed, randomising the frontier to avoid always expanding
+    in one direction. This mimics a deployment that radiates outward from a
+    base of operations.
+    """
+    seed_ci     = np.random.randint(0, N_CELLS)
+    seed_cid    = unique_cells[seed_ci]
+    selected    = []
+    visited     = {seed_cid}
+    frontier    = [seed_cid]
+    well_count  = 0
+
+    while frontier and well_count < target_wells:
+        # pick a random cell from the current frontier
+        idx   = np.random.randint(0, len(frontier))
+        cid   = frontier.pop(idx)
+        wells = cell_to_wells[cid]
+        selected.extend(wells)
+        well_count += len(wells)
+        # add unvisited neighbours to frontier
+        for nb in _cell_neighbours(cid):
+            if nb not in visited:
+                visited.add(nb)
+                frontier.append(nb)
+
+        # if frontier exhausted before target (island wells), restart from
+        # nearest unvisited cell (simulates aircraft ferry to new block)
+        if not frontier and well_count < target_wells:
+            for cid2 in unique_cells:
+                if cid2 not in visited:
+                    visited.add(cid2)
+                    frontier.append(cid2)
+                    break
+
+    return np.array(selected[:target_wells])
+
+
+def run_survey_mc(target_coverage_pct, n_mc=N_MC, gcn_n=N_MARCELLUS):
+    """
+    Monte Carlo survey simulation with contiguous spatial cell selection.
     target_coverage_pct: fraction of WELLS to cover (0–1).
+    gcn_n: GCN/1000 for PoD model (default: Marcellus 0.016).
     """
     target_wells = int(N_WELLS * target_coverage_pct)
 
-    # Pre-compute cell selection sets for speed:
-    # Randomly select cells until we have ≈ target_wells wells
     results = []
     for _ in range(n_mc):
-        # --- select cells in random order until target reached ---
-        cell_order = np.random.permutation(N_CELLS)
-        selected_well_idx = []
-        for ci in cell_order:
-            c = unique_cells[ci]
-            selected_well_idx.extend(cell_to_wells[c])
-            if len(selected_well_idx) >= target_wells:
-                break
-        selected_well_idx = np.array(selected_well_idx[:target_wells])
+        # --- select contiguous block of cells ---
+        selected_well_idx = _contiguous_cell_selection(target_wells)
 
         # --- draw random FEAST iteration ---
         it    = np.random.randint(0, N_ITER)
@@ -224,7 +313,7 @@ def run_survey_mc(target_coverage_pct, n_mc=N_MC, pod90=POD90_MARCELLUS):
         w = sample_wind()
 
         # --- PoD + Bernoulli ---
-        p_det  = pod(e_now, w, pod90)
+        p_det  = pod(e_now, w, n=gcn_n)
         det    = np.random.binomial(1, p_det).astype(bool)
 
         surveyed_total   = e_now.sum()
@@ -367,7 +456,7 @@ for q, days, note in [("Q1 Jan–Mar","38","(winter, fewest flyable)"),
 print("\n── Generating plots …")
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
 fig.suptitle("Bridger LiDAR Survey — PA Marginal Wells\n"
-             "Grounded in Thorpe et al. 2024 & Donahue et al. 2024",
+             "Grounded in Thorpe et al. 2024 & Donahue et al. 2025",
              fontsize=13, fontweight='bold')
 
 # ── (A) Emission distribution (mean) ──
@@ -378,7 +467,7 @@ ax.axvline(POD90_MARCELLUS, color='red',   lw=2, ls='--', label=f'Marcellus PoD9
 ax.axvline(POD90_OVERALL,   color='orange',lw=2, ls=':',  label=f'Overall PoD90={POD90_OVERALL} kg/h')
 ax.set_xlabel('Mean Emission (kg/h)')
 ax.set_ylabel('Density')
-ax.set_title('(A) Well Emission Distribution\n(mean across 250 FEAST iterations)')
+ax.set_title('(A) Well Emission Distribution\n(mean across 250 EIME iterations)')
 ax.set_xlim(0, 3.0)
 ax.legend(fontsize=8)
 
@@ -424,9 +513,9 @@ for (name, cov), c in zip(coverage_scenarios, colors_):
     ax.hist(df_sc['mitigation_pct'], bins=40, alpha=0.55,
             label=f"{cov*100:.0f}% cov (μ={df_sc['mitigation_pct'].mean():.0f}%)",
             color=c, density=True)
-ax.set_xlabel('Within-survey mitigation %\n(detected / surveyed-total emissions)')
+ax.set_xlabel('Within-survey mitigation %\n(detected emissions / surveyed-zone total)')
 ax.set_ylabel('Density')
-ax.set_title('(D) Within-Survey Detection Rate\n(correct denominator: surveyed emissions)')
+ax.set_title('(D) Within-Survey Detection Rate\nby coverage scenario')
 ax.legend(fontsize=8)
 ax.grid(alpha=0.3)
 
@@ -466,7 +555,7 @@ print(f"  Saved: {out_fig}")
 
 # ── Extra: single-iteration distribution plot ──
 fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5))
-fig2.suptitle("FEAST Emission Variability: Mean vs Single Iteration",
+fig2.suptitle("EIME Emission Variability: Mean vs Single Iteration",
               fontsize=12, fontweight='bold')
 
 ax2 = axes2[0]
@@ -495,7 +584,7 @@ ax2.axvline(np.percentile(iter_totals,95), color='orange', ls='--', lw=1.5,
             label=f'p95: {np.percentile(iter_totals,95):.0f} kg/h')
 ax2.set_xlabel('Total Portfolio Emissions (kg/h)')
 ax2.set_ylabel('Count (iterations)')
-ax2.set_title('Total PA marginal well emissions\nacross 250 FEAST stochastic iterations')
+ax2.set_title('Total PA marginal well emissions\nacross 250 EIME stochastic iterations')
 ax2.legend(fontsize=9)
 
 plt.tight_layout()
@@ -510,7 +599,17 @@ print(f"  Saved: {out_fig2}")
 output = {
     'metadata': {
         'n_wells': N_WELLS, 'n_feast_iterations': N_ITER,
+        'pod_model': 'Combined GML 2.0, P4 predictor + Burr inverse link (Thorpe et al. 2024 Table 3)',
+        'pod_formula': 'g = beta1*Q^beta2 / (n^beta3 * u^beta4);  PoD = 1-(1+g^alpha1)^(-alpha2)',
+        'pod_coefficients': {
+            'alpha1': POD_ALPHA1, 'alpha2': POD_ALPHA2,
+            'beta1': POD_BETA1, 'beta2': POD_BETA2,
+            'beta3': POD_BETA3, 'beta4': POD_BETA4,
+        },
+        'gcn_marcellus_ppbm': GCN_MARCELLUS,
+        'n_marcellus': N_MARCELLUS,
         'pod90_marcellus_kgph': POD90_MARCELLUS,
+        'pod90_marcellus_verification': round(_verify_pod90, 3),
         'wells_per_day_pa': WELLS_PER_DAY,
         'flyable_days_pa_year': FLYABLE_DAYS_YR,
         'annual_coverage_pct': round(100*ANNUAL_WELLS/N_WELLS, 1),
