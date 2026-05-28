@@ -1,0 +1,37 @@
+{
+  "n_surveys": 1,
+  "n_site_passes": 2,
+  "n_detections": 1,
+  "n_wells": 3,
+  "basins": [
+    "Marcellus"
+  ],
+  "warnings": [],
+  "pod_model": "GML 2.0 (Thorpe et al. 2024, Table 3)",
+  "gcn_default_ppm_m": 16.0,
+  "basin_summary": [
+    {
+      "basin": "Marcellus",
+      "n_detections": 1,
+      "emission_mean_kgph": 4.82,
+      "emission_median_kgph": 4.82,
+      "emission_p95_kgph": 4.82,
+      "emission_max_kgph": 4.82,
+      "total_observed_kgph": 4.82,
+      "n_passes": 2,
+      "n_passes_with_detection": 1,
+      "per_pass_detection_rate": 0.5,
+      "unique_sites_flown": 2
+    }
+  ],
+  "pod_corrected_totals": [
+    {
+      "basin": "Marcellus",
+      "n_detections": 1,
+      "mean_pod_at_detections": 1.0,
+      "observed_total_kgph": 4.82,
+      "pod_corrected_total_kgph": 4.82,
+      "note": "divides observed detection total by mean POD at detected emission rates; a first-order correction only"
+    }
+  ]
+}
