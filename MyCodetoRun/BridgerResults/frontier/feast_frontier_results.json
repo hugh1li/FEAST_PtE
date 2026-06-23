@@ -1,0 +1,202 @@
+[
+  {
+    "strategy": "S1",
+    "strategy_name": "Flat random",
+    "budget_usd": 3000,
+    "mitigation_pct": 7.813143771576616,
+    "mitigation_pct_sd": 3.1207029767141794,
+    "basin_ci_pct": 106.3301368127699,
+    "realized_cost_usd": 12293.166666666668,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S1",
+    "strategy_name": "Flat random",
+    "budget_usd": 8000,
+    "mitigation_pct": 10.665253850688995,
+    "mitigation_pct_sd": 2.14254294821255,
+    "basin_ci_pct": 68.95262868430368,
+    "realized_cost_usd": 31344.666666666668,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S1",
+    "strategy_name": "Flat random",
+    "budget_usd": 20000,
+    "mitigation_pct": 33.80987956818908,
+    "mitigation_pct_sd": 3.1939439963595095,
+    "basin_ci_pct": 39.75263464814135,
+    "realized_cost_usd": 44127.0,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S1",
+    "strategy_name": "Flat random",
+    "budget_usd": 50000,
+    "mitigation_pct": 74.5034924241384,
+    "mitigation_pct_sd": 0.36550100916652184,
+    "basin_ci_pct": 13.34873694324642,
+    "realized_cost_usd": 125289.83333333333,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S1",
+    "strategy_name": "Flat random",
+    "budget_usd": 120000,
+    "mitigation_pct": 71.35513151056233,
+    "mitigation_pct_sd": 2.151175101880206,
+    "basin_ci_pct": 12.72871760573248,
+    "realized_cost_usd": 133041.8333333333,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S2",
+    "strategy_name": "Tier-stratified",
+    "budget_usd": 3000,
+    "mitigation_pct": 1.9951350497238718,
+    "mitigation_pct_sd": 0.618865725257199,
+    "basin_ci_pct": 177.17441956800673,
+    "realized_cost_usd": 13836.666666666668,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S2",
+    "strategy_name": "Tier-stratified",
+    "budget_usd": 8000,
+    "mitigation_pct": 4.233229743246359,
+    "mitigation_pct_sd": 0.8266624538632996,
+    "basin_ci_pct": 106.42197134656355,
+    "realized_cost_usd": 28172.833333333336,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S2",
+    "strategy_name": "Tier-stratified",
+    "budget_usd": 20000,
+    "mitigation_pct": 17.489055593436383,
+    "mitigation_pct_sd": 7.796740467804488,
+    "basin_ci_pct": 55.99980502049567,
+    "realized_cost_usd": 47164.83333333333,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S2",
+    "strategy_name": "Tier-stratified",
+    "budget_usd": 50000,
+    "mitigation_pct": 40.80790596521362,
+    "mitigation_pct_sd": 4.48008104621206,
+    "basin_ci_pct": 29.20838397297839,
+    "realized_cost_usd": 83812.66666666667,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S2",
+    "strategy_name": "Tier-stratified",
+    "budget_usd": 120000,
+    "mitigation_pct": 72.73416858525869,
+    "mitigation_pct_sd": 0.40988232072951547,
+    "basin_ci_pct": 13.051812265931332,
+    "realized_cost_usd": 156168.16666666666,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S3",
+    "strategy_name": "Aerial then ground",
+    "budget_usd": 3000,
+    "mitigation_pct": 0.0,
+    "mitigation_pct_sd": 0.0,
+    "basin_ci_pct": 114.61656276975549,
+    "realized_cost_usd": 12615.0,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S3",
+    "strategy_name": "Aerial then ground",
+    "budget_usd": 8000,
+    "mitigation_pct": 0.0,
+    "mitigation_pct_sd": 0.0,
+    "basin_ci_pct": 89.02982122937232,
+    "realized_cost_usd": 14209.5,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S3",
+    "strategy_name": "Aerial then ground",
+    "budget_usd": 20000,
+    "mitigation_pct": 4.2491516371795095,
+    "mitigation_pct_sd": 4.2491516371795095,
+    "basin_ci_pct": 54.29449170399479,
+    "realized_cost_usd": 17474.833333333332,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S3",
+    "strategy_name": "Aerial then ground",
+    "budget_usd": 50000,
+    "mitigation_pct": 3.6983518888097286,
+    "mitigation_pct_sd": 3.6983518888097286,
+    "basin_ci_pct": 23.11221971028648,
+    "realized_cost_usd": 41381.833333333336,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S3",
+    "strategy_name": "Aerial then ground",
+    "budget_usd": 120000,
+    "mitigation_pct": 4.095725665829938,
+    "mitigation_pct_sd": 4.095725665829938,
+    "basin_ci_pct": 11.786499281495745,
+    "realized_cost_usd": 58593.33333333333,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S4",
+    "strategy_name": "Aerial + RS prior",
+    "budget_usd": 3000,
+    "mitigation_pct": 3.0004568659032524,
+    "mitigation_pct_sd": 3.0004568659032524,
+    "basin_ci_pct": 144.7083487878714,
+    "realized_cost_usd": 5100.833333333334,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S4",
+    "strategy_name": "Aerial + RS prior",
+    "budget_usd": 8000,
+    "mitigation_pct": 8.59045279614516,
+    "mitigation_pct_sd": 0.5299911944860831,
+    "basin_ci_pct": 97.9000039058163,
+    "realized_cost_usd": 16701.666666666668,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S4",
+    "strategy_name": "Aerial + RS prior",
+    "budget_usd": 20000,
+    "mitigation_pct": 0.0,
+    "mitigation_pct_sd": 0.0,
+    "basin_ci_pct": 48.92181481664282,
+    "realized_cost_usd": 16336.0,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S4",
+    "strategy_name": "Aerial + RS prior",
+    "budget_usd": 50000,
+    "mitigation_pct": 10.125933429030143,
+    "mitigation_pct_sd": 0.20648704371730275,
+    "basin_ci_pct": 28.704594691856997,
+    "realized_cost_usd": 41476.16666666667,
+    "n_mc": 2
+  },
+  {
+    "strategy": "S4",
+    "strategy_name": "Aerial + RS prior",
+    "budget_usd": 120000,
+    "mitigation_pct": 0.0,
+    "mitigation_pct_sd": 0.0,
+    "basin_ci_pct": 12.734244015168219,
+    "realized_cost_usd": 58180.0,
+    "n_mc": 2
+  }
+]
