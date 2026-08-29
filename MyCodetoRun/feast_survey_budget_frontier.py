@@ -420,7 +420,7 @@ def run_sweep(args):
     return results
 
 
-def detect_elbow(rows_for_strategy):
+def detect_elbow(rows_for_strategy): # interesting, elbow is here...
     """Knee of basin_ci vs budget: max curvature on the log-budget axis."""
     rows = sorted(rows_for_strategy, key=lambda r: r["budget_usd"])
     x = np.log10([r["budget_usd"] for r in rows]); y = np.array([r["basin_ci_pct"] for r in rows])
